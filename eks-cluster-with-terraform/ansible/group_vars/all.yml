@@ -1,0 +1,23 @@
+---
+# AWS Configuration
+aws_region: "us-east-1"
+eks_cluster_name: "kenzy-eks-cluster"
+cloudtrail_bucket: "kenzy-cloudtrail-logs"
+cloudtrail_name: "kenzy-eks-audit-trail"
+
+# Tool Versions
+checkov_version: "latest"
+tfsec_version: "1.28.4"
+infracost_version: "0.10.29"
+
+# Kubernetes Namespaces
+kyverno_namespace: "kyverno"
+argocd_namespace: "argocd"
+
+# ArgoCD Configuration
+argocd_version: "v2.9.3"
+argocd_admin_password: "OJomtcukq6NGN4NI"  
+
+# Kyverno Configuration
+kyverno_version: "3.1.4"
+kyverno_policies_enabled: true

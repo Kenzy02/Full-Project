@@ -1,0 +1,353 @@
+---
+- name: Setup Infrastructure Tools and Deploy to EKS
+  hosts: localhost
+  gather_facts: yes
+  vars_files:
+    - group_vars/all.yml
+  vars:
+    helm_binary_path: "/usr/local/bin/helm"
+
+  tasks:
+    # ==========================================
+    # Pre-requisites
+    # ==========================================
+    - name: Install system dependencies
+      become: yes
+      apt:
+        name:
+          - python3-pip
+          - curl
+          - wget
+          - unzip
+          - git
+          - jq
+        state: present
+        update_cache: yes
+      when: ansible_facts["os_family"] == "Debian"
+
+    - name: Install Python packages
+      pip:
+        name:
+          - boto3
+          - botocore
+          - kubernetes
+          - openshift
+          - pyyaml
+        state: present
+
+    # ==========================================
+    # Install Checkov
+    # ==========================================
+    - name: Install Checkov
+      pip:
+        name: checkov
+        state: latest
+      tags: checkov
+
+    - name: Verify Checkov installation
+      command: checkov --version
+      register: checkov_version_output
+      changed_when: false
+      tags: checkov
+
+    - name: Display Checkov version
+      debug:
+        msg: "{{ checkov_version_output.stdout }}"
+      tags: checkov
+
+    # ==========================================
+    # Install tfsec
+    # ==========================================
+    - name: Download tfsec
+      get_url:
+        url: "https://github.com/aquasecurity/tfsec/releases/download/v{{ tfsec_version }}/tfsec-linux-amd64"
+        dest: /tmp/tfsec
+        mode: '0755'
+      tags: tfsec
+
+    - name: Install tfsec
+      become: yes
+      copy:
+        src: /tmp/tfsec
+        dest: /usr/local/bin/tfsec
+        mode: '0755'
+        remote_src: yes
+      tags: tfsec
+
+    - name: Verify tfsec installation
+      command: tfsec --version
+      register: tfsec_version_output
+      changed_when: false
+      tags: tfsec
+
+    - name: Display tfsec version
+      debug:
+        msg: "{{ tfsec_version_output.stdout }}"
+      tags: tfsec
+
+    # ==========================================
+    # Install TFLint (TerraLint alternative)
+    # ==========================================
+    - name: Download TFLint install script
+      get_url:
+        url: https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh
+        dest: /tmp/install_tflint.sh
+        mode: '0755'
+      tags: tflint
+
+    - name: Install TFLint
+      become: yes
+      shell: /tmp/install_tflint.sh
+      args:
+        creates: /usr/local/bin/tflint
+      tags: tflint
+
+    - name: Verify TFLint installation
+      command: tflint --version
+      register: tflint_version_output
+      changed_when: false
+      tags: tflint
+
+    - name: Display TFLint version
+      debug:
+        msg: "{{ tflint_version_output.stdout }}"
+      tags: tflint
+
+    # ==========================================
+    # Install Infracost
+    # ==========================================
+    - name: Download Infracost install script
+      get_url:
+        url: https://raw.githubusercontent.com/infracost/infracost/master/scripts/install.sh
+        dest: /tmp/install_infracost.sh
+        mode: '0755'
+      tags: infracost
+
+    - name: Install Infracost
+      become: yes
+      shell: /tmp/install_infracost.sh
+      args:
+        creates: /usr/local/bin/infracost
+      environment:
+        INFRACOST_SKIP_UPDATE_CHECK: "true"
+      tags: infracost
+
+    - name: Verify Infracost installation
+      command: infracost --version
+      register: infracost_version_output
+      changed_when: false
+      tags: infracost
+
+    - name: Display Infracost version
+      debug:
+        msg: "{{ infracost_version_output.stdout }}"
+      tags: infracost
+
+    # ==========================================
+    # Configure AWS CloudTrail
+    # ==========================================
+    - name: Create S3 bucket for CloudTrail logs
+      amazon.aws.s3_bucket:
+        name: "{{ cloudtrail_bucket }}"
+        region: "{{ aws_region }}"
+        state: present
+        encryption: "AES256"
+        versioning: yes
+      tags: cloudtrail
+
+    - name: Create CloudTrail bucket policy
+      amazon.aws.s3_bucket:
+        name: "{{ cloudtrail_bucket }}"
+        region: "{{ aws_region }}"
+        policy: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Sid": "AWSCloudTrailAclCheck",
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "cloudtrail.amazonaws.com"
+                },
+                "Action": "s3:GetBucketAcl",
+                "Resource": "arn:aws:s3:::{{ cloudtrail_bucket }}"
+              },
+              {
+                "Sid": "AWSCloudTrailWrite",
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "cloudtrail.amazonaws.com"
+                },
+                "Action": "s3:PutObject",
+                "Resource": "arn:aws:s3:::{{ cloudtrail_bucket }}/*",
+                "Condition": {
+                  "StringEquals": {
+                    "s3:x-amz-acl": "bucket-owner-full-control"
+                  }
+                }
+              }
+            ]
+          }
+      tags: cloudtrail
+
+    - name: Enable CloudTrail
+      community.aws.cloudtrail:
+        name: "{{ cloudtrail_name }}"
+        s3_bucket_name: "{{ cloudtrail_bucket }}"
+        region: "{{ aws_region }}"
+        include_global_events: yes
+        is_multi_region_trail: yes
+        enable_logging: yes
+        state: present
+      tags: cloudtrail
+
+    # ==========================================
+    # Configure kubectl for EKS
+    # ==========================================
+    - name: Update kubeconfig for EKS cluster
+      command: >
+        aws eks update-kubeconfig
+        --name {{ eks_cluster_name }}
+        --region {{ aws_region }}
+      changed_when: false
+      tags: always
+
+    - name: Verify cluster connectivity
+      kubernetes.core.k8s_cluster_info:
+      register: cluster_info
+      tags: always
+
+    # ==========================================
+    # Deploy Kyverno
+    # ==========================================
+    - name: Create Kyverno namespace
+      kubernetes.core.k8s:
+        name: "{{ kyverno_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+      tags: kyverno
+
+    - name: Add Kyverno Helm repository
+      kubernetes.core.helm_repository:
+        name: kyverno
+        repo_url: https://kyverno.github.io/kyverno/
+        binary_path: "{{ helm_binary_path }}"
+      tags: kyverno
+
+    - name: Deploy Kyverno via Helm
+      kubernetes.core.helm:
+        name: kyverno
+        chart_ref: kyverno/kyverno
+        chart_version: "{{ kyverno_version }}"
+        release_namespace: "{{ kyverno_namespace }}"
+        create_namespace: yes
+        binary_path: "{{ helm_binary_path }}"
+        wait: yes
+        wait_timeout: 10m
+        values:
+          replicaCount: 3
+          podSecurityStandard: restricted
+      tags: kyverno
+
+    - name: Deploy Kyverno Policies
+      kubernetes.core.helm:
+        name: kyverno-policies
+        chart_ref: kyverno/kyverno-policies
+        release_namespace: "{{ kyverno_namespace }}"
+        binary_path: "{{ helm_binary_path }}"
+        wait: yes
+        wait_timeout: 5m
+        values:
+          podSecurityStandard: restricted
+      when: kyverno_policies_enabled
+      tags: kyverno
+
+    # ==========================================
+    # Deploy ArgoCD
+    # ==========================================
+    - name: Create ArgoCD namespace
+      kubernetes.core.k8s:
+        name: "{{ argocd_namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+      tags: argocd
+
+    - name: Install ArgoCD
+      kubernetes.core.k8s:
+        state: present
+        src: https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml
+        namespace: "{{ argocd_namespace }}"
+      tags: argocd
+
+    - name: Wait for ArgoCD server to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ argocd_namespace }}"
+        name: argocd-server
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+      tags: argocd
+
+    - name: Patch ArgoCD service to LoadBalancer
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: argocd-server
+            namespace: "{{ argocd_namespace }}"
+          spec:
+            type: LoadBalancer
+      tags: argocd
+
+    # ==========================================
+    # Post-deployment verification
+    # ==========================================
+    - name: Get ArgoCD admin password
+      kubernetes.core.k8s_info:
+        kind: Secret
+        namespace: "{{ argocd_namespace }}"
+        name: argocd-initial-admin-secret
+      register: argocd_secret
+      tags: argocd
+
+    - name: Display ArgoCD credentials
+      debug:
+        msg:
+          - "ArgoCD URL: Check the LoadBalancer service endpoint"
+          - "Username: admin"
+          - "Password: {{ argocd_secret.resources[0].data.password | b64decode }}"
+      when: argocd_secret.resources | length > 0
+      tags: argocd
+
+    - name: Display tool installation summary
+      debug:
+        msg:
+          - "=========================================="
+          - "Tool Installation Complete!"
+          - "=========================================="
+          - "CLI Tools Installed:"
+          - "  - Checkov: {{ checkov_version_output.stdout }}"
+          - "  - tfsec: {{ tfsec_version_output.stdout }}"
+          - "  - TFLint: {{ tflint_version_output.stdout }}"
+          - "  - Infracost: {{ infracost_version_output.stdout }}"
+          - ""
+          - "AWS Services Configured:"
+          - "  - CloudTrail: {{ cloudtrail_name }}"
+          - "  - S3 Bucket: {{ cloudtrail_bucket }}"
+          - ""
+          - "Kubernetes Applications Deployed:"
+          - "  - Kyverno (Namespace: {{ kyverno_namespace }})"
+          - "  - ArgoCD (Namespace: {{ argocd_namespace }})"
+          - ""
+          - "Next Steps:"
+          - "  1. Configure Infracost API key: infracost auth login"
+          - "  2. Access ArgoCD UI via LoadBalancer"
+          - "  3. Run security scans: checkov -d . && tfsec ."
+          - "=========================================="

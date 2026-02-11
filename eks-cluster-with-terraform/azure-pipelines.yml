@@ -1,0 +1,52 @@
+trigger: none
+
+pool:
+  name: 'Default'
+
+variables:
+  - name: TF_VERSION
+    value: '1.5.0'
+  # Increases the timeout for downloading providers/registry calls (in minutes)
+  - name: TF_REGISTRY_CLIENT_TIMEOUT
+    value: '30'
+
+stages:
+  - stage: Terraform
+    displayName: 'Terraform Deployment'
+    jobs:
+      - job: TerraformRun
+        displayName: 'Terraform Init & Apply'
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: TerraformInstaller@0
+            displayName: 'Ensure Terraform $(TF_VERSION)'
+            inputs:
+              terraformVersion: $(TF_VERSION)
+
+          - script: |
+              echo "Initializing Terraform..."
+              # -input=false prevents hanging if the internet blips
+              # TF_LOG=INFO helps you see download progress in the logs
+              export TF_LOG=INFO
+              terraform init \
+                -input=false \
+                -backend-config="bucket=kenzy-eks-bucket" \
+                -backend-config="key=terraform.tfstate" \
+                -backend-config="region=us-east-1"
+            displayName: 'Terraform Init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+          - script: |
+              echo "Running Terraform Plan..."
+              terraform plan -input=false -var-file=terraform.tfvars -out=tfplan
+            displayName: 'Terraform Plan'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+          - script: |
+              echo "Applying Changes..."
+              # Using the plan file (tfplan) ensures we only apply what we saw in the plan
+              terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
