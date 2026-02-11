@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: pro-be
+  labels:
+    app: backend
+    component: api
+data:
+  DATABASE_HOST: "postgresql-service.pro-db.svc.cluster.local"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "taskmanager"
+  FLASK_ENV: "production"
+  FLASK_APP: "app.py"
+  API_VERSION: "v1"
+  LOG_LEVEL: "INFO"

@@ -1,0 +1,66 @@
+# Trivy Configuration File
+# Security scanning configuration for container images
+
+# Scan settings
+scan:
+  # Security issues to detect
+  security-checks:
+    - vuln      # Vulnerabilities
+    - config    # Misconfigurations
+    - secret    # Secrets
+  
+  # Severity levels to report
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+  
+  # Exit code on findings
+  exit-code: 1  # Fail build on vulnerabilities
+
+# Vulnerability settings
+vulnerability:
+  # Vulnerability type
+  type:
+    - os      # OS packages
+    - library # Application dependencies
+  
+  # Ignore unfixed vulnerabilities
+  ignore-unfixed: false
+
+# Misconfiguration settings
+misconfiguration:
+  # Include built-in checks
+  include-non-failures: false
+  
+  # Kubernetes checks
+  kubernetes:
+    severity:
+      - CRITICAL
+      - HIGH
+
+# Secret scanning
+secret:
+  config: .trivyignore
+
+# Output settings
+format: table  # Or: table, json, template
+
+# Cache settings
+cache:
+  backend: fs
+  
+# Database settings
+db:
+  # Update database before scanning
+  skip-update: false
+
+# Registry settings
+registry:
+  # Timeout for registry queries
+  timeout: 5m
+
+# Ignore specific vulnerabilities (use .trivyignore file)
+# Example .trivyignore content:
+# CVE-2021-12345
+# CVE-2021-67890

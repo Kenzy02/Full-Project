@@ -1,0 +1,32 @@
+# EKS specific overrides for Frontend
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: alb
+  # Self-signed certificate ARN v2 (with FQDN)
+  certificateArn: "arn:aws:acm:us-east-1:868084983845:certificate/0a5c5e2a-762b-4fd7-80a2-07e9edcc2079"
+  hosts:
+    - host: "" # Serves all traffic coming to the ALB
+      paths:
+        - path: /
+          pathType: Prefix
+
+replicas: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 400m
+    memory: 512Mi
+
+hpa:
+  minReplicas: 3
+  maxReplicas: 10
+  cpuTargetUtilization: 70
+  memoryTargetUtilization: 80

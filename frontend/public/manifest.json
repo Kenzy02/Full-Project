@@ -1,0 +1,9 @@
+{
+  "short_name": "Microservices App",
+  "name": "Full-Stack Microservices Application",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

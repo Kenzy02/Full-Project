@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-scripts
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: postgresql
+    component: database
+data:
+  schema.sql: |
+    -- Task Manager Database Schema
+    
+    -- Drop tables if they exist (for development only)
+    DROP TABLE IF EXISTS task CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+    
+    -- Create users table
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create task table
+    CREATE TABLE IF NOT EXISTS task (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        description TEXT,
+        completed BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create indexes for better performance
+    CREATE INDEX IF NOT EXISTS idx_task_created_at ON task(created_at);
+    
+    -- Insert sample data (optional for development)
+    INSERT INTO users (username, email, password_hash) 
+    VALUES ('admin', 'admin@example.com', 'hashed_password_here')
+    ON CONFLICT (username) DO NOTHING;
+    
+    INSERT INTO task (title, description, completed)
+    VALUES ('Sample Task', 'This is a sample task', false)
+    ON CONFLICT DO NOTHING;
+    
+    -- Grant necessary permissions
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;

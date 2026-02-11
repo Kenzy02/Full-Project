@@ -1,0 +1,9 @@
+# Trivy Ignore File
+# Add CVE IDs to ignore during scanning
+# Format: One CVE ID per line with optional comment
+
+# Example: Ignore specific CVEs with justification
+# CVE-2021-12345  # Fixed in next release, minimal impact
+# CVE-2021-67890  # False positive, not applicable to our use case
+
+# Add your ignored CVEs below:

@@ -1,0 +1,31 @@
+# Production environment values for PostgreSQL
+replicas: 1
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+storage:
+  capacity: 50Gi
+  reclaimPolicy: Retain
+
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 3
+  cpuTargetUtilization: 70
+  memoryTargetUtilization: 80
+
+pdb:
+  maxUnavailable: 0

@@ -1,0 +1,57 @@
+namespace: pro-db
+
+image:
+  repository: postgres
+  tag: "15-alpine"
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+strategy:
+  type: Recreate
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 5432
+  targetPort: 5432
+
+storage:
+  capacity: 10Gi
+  accessMode: ReadWriteOnce
+  reclaimPolicy: Retain
+  storageClassName: standard
+  hostPath: /mnt/data/postgresql
+
+secrets:
+  postgres_user: "postgres"
+  postgres_password: "postgres"
+  postgres_db: "taskmanager"
+
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+pdb:
+  maxUnavailable: 0
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 3
+  cpuTargetUtilization: 80
+  memoryTargetUtilization: 85

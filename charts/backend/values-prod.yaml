@@ -1,0 +1,34 @@
+# Production environment values for backend
+image:
+  tag: "5d34b45"
+
+replicas: 3
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+config:
+  FLASK_ENV: "production"
+  LOG_LEVEL: "WARNING"
+
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+hpa:
+  minReplicas: 3
+  maxReplicas: 10
+  cpuTargetUtilization: 40
+  memoryTargetUtilization: 60
+
+pdb:
+  minAvailable: 2

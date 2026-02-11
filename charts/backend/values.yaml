@@ -1,0 +1,67 @@
+namespace: pro-be
+
+image:
+  repository: kenzyehab/project-backend
+  tag: "5d34b45"
+  pullPolicy: Always
+
+replicas: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 5000
+  targetPort: 5000
+
+config:
+  DATABASE_HOST: "postgresql-service.pro-db.svc.cluster.local"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "taskmanager"
+  FLASK_ENV: "production"
+  FLASK_APP: "app.py"
+  API_VERSION: "v1"
+  LOG_LEVEL: "INFO"
+  DATABASE_URL: "postgresql://postgres:postgres@postgresql-service.pro-db.svc.cluster.local:5432/taskmanager"
+
+secrets:
+  db_user: "postgres"
+  db_password: "postgres"
+
+security:
+  runAsUser: 1000
+  runAsNonRoot: true
+  fsGroup: 1000
+
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+pdb:
+  minAvailable: 1
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 5
+  cpuTargetUtilization: 50
+  memoryTargetUtilization: 70

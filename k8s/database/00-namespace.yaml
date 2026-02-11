@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pro-db
+  labels:
+    name: pro-db
+    environment: production

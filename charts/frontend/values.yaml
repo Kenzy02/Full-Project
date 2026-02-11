@@ -1,0 +1,73 @@
+namespace: pro-fe
+
+image:
+  repository: kenzyehab/project-frontend
+  tag: "5d34b45"
+  pullPolicy: Always
+
+replicas: 2
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+security:
+  runAsUser: 101
+  runAsNonRoot: true
+  fsGroup: 101
+
+probes:
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+pdb:
+  minAvailable: 1
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 5
+  cpuTargetUtilization: 70
+  memoryTargetUtilization: 80
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+  labels: {}
+  hosts:
+    - host: localhost
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # tls:
+  # - secretName: taskmanager-tls
+  #   hosts:
+  #     - example.com

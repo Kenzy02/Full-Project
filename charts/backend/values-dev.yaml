@@ -1,0 +1,31 @@
+# Development environment values for backend
+image:
+  tag: "5d34b45"
+
+replicas: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+config:
+  FLASK_ENV: "development"
+  LOG_LEVEL: "DEBUG"
+
+probes:
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 20
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 3
+  cpuTargetUtilization: 60
+  memoryTargetUtilization: 75

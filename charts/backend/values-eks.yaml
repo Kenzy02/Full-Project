@@ -1,0 +1,22 @@
+# EKS specific overrides for Backend
+replicas: 3
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# Use higher scaling limits in EKS
+hpa:
+  minReplicas: 3
+  maxReplicas: 10
+  cpuTargetUtilization: 60
+  memoryTargetUtilization: 75
+
+# Core configuration remains similar as it uses internal cluster DNS
+config:
+  FLASK_ENV: "production"
+  LOG_LEVEL: "INFO"

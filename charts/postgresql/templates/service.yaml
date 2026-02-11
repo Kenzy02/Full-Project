@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: postgresql
+    component: database
+spec:
+  clusterIP: None
+  type: {{ .Values.service.type }}
+  selector:
+    app: postgresql
+    component: database
+  ports:
+  - name: postgres
+    port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.targetPort }}
+    protocol: TCP
+  sessionAffinity: None

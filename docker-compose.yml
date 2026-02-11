@@ -1,0 +1,46 @@
+name: appv2
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: microservices_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    image: project-backend:dev
+    ports:
+      - "5002:5000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/microservices_db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: project-frontend:dev
+    ports:
+      - "8081:8080"
+    environment:
+      REACT_APP_API_URL: http://localhost:5001/api
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

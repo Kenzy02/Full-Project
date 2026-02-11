@@ -1,0 +1,18 @@
+# EKS specific overrides for PostgreSQL
+storage:
+  storageClassName: ebs-sc
+  capacity: 20Gi
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# HPA overrides for production-like load in EKS
+hpa:
+  minReplicas: 2
+  maxReplicas: 5
