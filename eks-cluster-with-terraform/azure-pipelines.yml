@@ -26,27 +26,65 @@ stages:
               terraformVersion: $(TF_VERSION)
 
           - script: |
-              echo "Initializing Terraform..."
-              # -input=false prevents hanging if the internet blips
-              # TF_LOG=INFO helps you see download progress in the logs
-              export TF_LOG=INFO
+              echo "##[group]🔧 Initialize Terraform"
               terraform init \
                 -input=false \
                 -backend-config="bucket=kenzy-eks-bucket" \
                 -backend-config="key=terraform.tfstate" \
                 -backend-config="region=us-east-1"
+               echo "##[endgroup]"
             displayName: 'Terraform Init'
             workingDirectory: '$(System.DefaultWorkingDirectory)'
 
           - script: |
-              echo "Running Terraform Plan..."
+              echo "##[group]🛡️ Setup Security Tools"
+              # Install Ansible if missing
+              if ! command -v ansible-playbook &> /dev/null; then
+                sudo apt update && sudo apt install -y ansible
+              fi
+              
+              # Run Ansible to install Checkov, tfsec, TFLint
+              cd ansible
+              ansible-playbook playbook.yml --tags "checkov,tfsec,tflint"
+              echo "##[endgroup]"
+            displayName: 'Install Security Tools (Ansible)'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+          - script: |
+              echo "##[group]🔍 Running Pre-Apply Security Scans"
+              echo "--- tfsec scan ---"
+              tfsec .
+              
+              echo "--- checkov scan ---"
+              checkov -d . --quiet --compact
+              
+              echo "--- tflint scan ---"
+              tflint --init && tflint
+              echo "##[endgroup]"
+            displayName: 'Execute Security Audits'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+            continueOnError: true # Report results but don't block yet (user choice)
+
+          - script: |
+              echo "##[group]📋 Terraform Plan"
               terraform plan -input=false -var-file=terraform.tfvars -out=tfplan
+              echo "##[endgroup]"
             displayName: 'Terraform Plan'
             workingDirectory: '$(System.DefaultWorkingDirectory)'
 
           - script: |
-              echo "Applying Changes..."
-              # Using the plan file (tfplan) ensures we only apply what we saw in the plan
+              echo "##[group]🚀 Terraform Apply"
               terraform apply -auto-approve tfplan
+              echo "##[endgroup]"
             displayName: 'Terraform Apply'
             workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+          - script: |
+              echo "##[group]☸️ Configure Cluster Platform (ArgoCD & Kyverno)"
+              # Use Ansible to deploy the cluster platform resources
+              cd ansible
+              ansible-playbook playbook.yml --tags "cloudtrail,kyverno,argocd"
+              echo "##[endgroup]"
+            displayName: 'Finalize Platform Setup'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+            condition: succeeded()
