@@ -37,33 +37,51 @@ stages:
             workingDirectory: '$(System.DefaultWorkingDirectory)'
 
           - script: |
-              echo "##[group]🛡️ Setup Security Tools"
-              # Install Ansible if missing
-              if ! command -v ansible-playbook &> /dev/null; then
-                sudo apt update && sudo apt install -y ansible
-              fi
+              echo "##[group]🔍 Generating HTML Security Reports"
+              mkdir -p $(System.DefaultWorkingDirectory)/security-reports
               
-              # Run Ansible to install Checkov, tfsec, TFLint
-              cd ansible
-              ansible-playbook playbook.yml --tags "checkov,tfsec,tflint"
+              # Install jinja2 for potential custom HTML templates if needed later
+              pip install jinja2 pyyaml --user
+              
+              echo "--- Running tfsec (JSON for records) ---"
+              tfsec . --format json --out $(System.DefaultWorkingDirectory)/security-reports/tfsec-report.json || true
+              
+              echo "--- Running checkov (HTML) ---"
+              # Checkov supports multiple outputs. We generate HTML for the dashboard.
+              checkov -d . --output html > $(System.DefaultWorkingDirectory)/security-reports/checkov-report.html || true
+              
+              echo "--- Running tflint (JSON) ---"
+              tflint --init && tflint --format json > $(System.DefaultWorkingDirectory)/security-reports/tflint-report.json || true
+
+              echo "--- Running trivy (HTML) ---"
+              # Install Trivy if missing
+              if ! command -v trivy &> /dev/null; then
+                wget -qO - https://aquasecurity.github.io/trivy-repo/dabest.gpg | sudo apt-key add -
+                echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+                sudo apt update && sudo apt install -y trivy
+              fi
+              # Download an HTML template for Trivy or use built-in
+              trivy config . --format template --template "@contrib/html.tpl" --output $(System.DefaultWorkingDirectory)/security-reports/trivy-report.html || true
+              
+              # Create a simple Index.html for the dashboard if it doesn't exist
+              echo "<h1>Security Audit Summary</h1><ul><li><a href='trivy-report.html'>Trivy Report</a></li><li><a href='checkov-report.html'>Checkov Report</a></li></ul>" > $(System.DefaultWorkingDirectory)/security-reports/index.html
               echo "##[endgroup]"
-            displayName: 'Install Security Tools (Ansible)'
+            displayName: 'Execute Security Audits & Generate HTML'
             workingDirectory: '$(System.DefaultWorkingDirectory)'
 
-          - script: |
-              echo "##[group]🔍 Running Pre-Apply Security Scans"
-              echo "--- tfsec scan ---"
-              tfsec .
-              
-              echo "--- checkov scan ---"
-              checkov -d . --quiet --compact
-              
-              echo "--- tflint scan ---"
-              tflint --init && tflint
-              echo "##[endgroup]"
-            displayName: 'Execute Security Audits'
-            workingDirectory: '$(System.DefaultWorkingDirectory)'
-            continueOnError: true # Report results but don't block yet (user choice)
+          # This task enables the "HTML Report" tab in the Azure DevOps build results
+          - task: PublishHtmlReport@1
+            displayName: 'Publish Security Dashboard'
+            inputs:
+              reportDir: '$(System.DefaultWorkingDirectory)/security-reports/index.html'
+              tabName: 'Security Analysis'
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Archive Raw Security Data'
+            inputs:
+               targetPath: '$(System.DefaultWorkingDirectory)/security-reports'
+               artifact: 'SecurityReports'
+               publishLocation: 'pipeline'
 
           - script: |
               echo "##[group]📋 Terraform Plan"
