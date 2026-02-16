@@ -175,12 +175,7 @@ project/
 │   │   ├── main.tf                  # EKS cluster
 │   │   ├── variables.tf
 │   │   └── outputs.tf
-│   ├── azure/
-│   │   ├── main.tf                  # AKS cluster
-│   │   └── ...
-│   └── gcp/
-│       ├── main.tf                  # GKE cluster
-│       └── ...
+│ 
 ├── docker-compose.yml               # Local development
 ├── sonar-project.properties         # SonarCloud config
 ├── .trivy.yaml                      # Trivy scanner config
