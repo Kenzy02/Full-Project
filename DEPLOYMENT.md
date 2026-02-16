@@ -488,61 +488,7 @@ roleRef:
 EOF
 ```
 
----
 
-## CI/CD Integration
-
-### GitHub Actions Setup
-
-**Step 1: Configure Repository Secrets**
-
-Go to GitHub Repository → Settings → Secrets and Variables → Actions
-
-Add the following secrets:
-- `SONAR_TOKEN`: SonarCloud token
-- `KUBE_CONFIG_DEV`: Base64 encoded kubeconfig for dev cluster
-- `KUBE_CONFIG_PROD`: Base64 encoded kubeconfig for prod cluster
-- `DEV_DATABASE_URL`: Development database connection string
-- `DEV_POSTGRES_PASSWORD`: Development PostgreSQL password
-
-**Generate base64 kubeconfig:**
-```bash
-# For development
-cat ~/.kube/config | base64 -w 0
-
-# Copy the output and add as KUBE_CONFIG_DEV secret
-```
-
-**Step 2: Configure SonarCloud**
-1. Go to https://sonarcloud.io
-2. Import your GitHub repository
-3. Get the SONAR_TOKEN
-4. Add to GitHub secrets
-
-**Step 3: Trigger Pipeline**
-```bash
-# Push to main branch triggers CI/CD
-git add .
-git commit -m "Deploy application"
-git push origin main
-
-# Monitor in GitHub Actions tab
-```
-
-### Security Scanning Gates
-
-The CI/CD pipeline includes:
-- **SAST**: SonarCloud scans code quality and security
-- **Container Scan**: Trivy scans for vulnerabilities (fails on HIGH/CRITICAL)
-- **Helm Lint**: Validates Kubernetes manifests
-- **Unit Tests**: Backend and frontend tests
-
-**View Scan Results:**
-- SonarCloud: https://sonarcloud.io/dashboard?id=YOUR_PROJECT
-- GitHub Security Tab: Shows Trivy results
-- GitHub Actions logs: Shows all scan outputs
-
----
 
 ## Monitoring and Logging
 
