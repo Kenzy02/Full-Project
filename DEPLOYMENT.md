@@ -2,17 +2,6 @@
 
 Complete step-by-step guide for deploying the full-stack microservices application to Kubernetes.
 
-## Table of Contents
-1. [Prerequisites](#prerequisites)
-2. [Local Testing](#local-testing)
-3. [Cloud Infrastructure Setup](#cloud-infrastructure-setup)
-4. [Kubernetes Cluster Setup](#kubernetes-cluster-setup)
-5. [Application Deployment](#application-deployment)
-6. [Security Configuration](#security-configuration)
-7. [CI/CD Integration](#cicd-integration)
-8. [Monitoring and Logging](#monitoring-and-logging)
-9. [Troubleshooting](#troubleshooting)
-
 ---
 
 ## Prerequisites
