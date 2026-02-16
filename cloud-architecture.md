@@ -4,76 +4,8 @@ This document visualizes the production-grade architecture built on AWS EKS. It 
 
 ## 🏗️ Architecture Diagram
 
-```mermaid
-graph TD
-    subgraph Internet
-        User((User Browser))
-    end
+<img width="1536" height="1024" alt="ChatGPT Image Feb 16, 2026, 03_28_55 PM" src="https://github.com/user-attachments/assets/77e2cb80-fc36-4ae0-b531-ccf88d03764e" />
 
-    subgraph AWS_Cloud ["AWS Cloud (us-east-1)"]
-        subgraph VPC ["VPC (10.0.0.0/16)"]
-            IGW[Internet Gateway]
-            
-            subgraph Public_Subnets ["Public Subnets (Tier: Public)"]
-                ALB[[AWS Application Load Balancer]]
-                NAT[NAT Gateways]
-            end
-
-            subgraph Private_Subnets ["Private Subnets (Tier: Private)"]
-                subgraph EKS_Nodes ["EKS Managed Node Group"]
-                    subgraph Pods_Frontend [Namespace: pro-fe]
-                        FE1[Frontend Pod]
-                        FE2[Frontend Pod]
-                        FE3[Frontend Pod]
-                    end
-                    
-                    subgraph Pods_Backend [Namespace: pro-be]
-                        BE1[Backend Pod]
-                        BE2[Backend Pod]
-                        BE3[Backend Pod]
-                    end
-                    
-                    subgraph Pods_DB [Namespace: pro-db]
-                        DB_SS[PostgreSQL StatefulSet]
-                        DB1[(Postgres Pod 0)]
-                        DB2[(Postgres Pod 1)]
-                    end
-
-                    subgraph Controllers [Namespace: kube-system]
-                        LBC[AWS Load Balancer Controller]
-                        EBS_CSI[EBS CSI Driver]
-                    end
-
-                    subgraph Backups [Namespace: velero]
-                        VELERO[Velero Server]
-                    end
-                end
-            end
-        end
-
-        subgraph External_Services ["AWS Managed Services"]
-            ACM[ACM: SSL/TLS Certificates]
-            EBS_VOL[(AWS EBS gp3 Volumes)]
-            S3_BACKUP[S3: Velero Backups]
-            S3_TF[S3: Terraform State]
-        end
-    end
-
-    %% Communication Flow
-    User -- "HTTPS (443)" --> ALB
-    ALB -- "SSL Termination (ACM)" --> ACM
-    ALB -- "Route Traffic" --> FE1 & FE2 & FE3
-    FE1 & FE2 & FE3 -- "API Requests" --> BE1 & BE2 & BE3
-    BE1 & BE2 & BE3 -- "SQL Connection" --> DB_SS
-    DB_SS -- "Stateful Storage" --> DB1 & DB2
-    
-    %% Infrastructure Management
-    DB1 & DB2 -- "Read/Write" --> EBS_VOL
-    EBS_CSI -- "Manage" --> EBS_VOL
-    VELERO -- "Snapshots & Metadata" --> S3_BACKUP
-    NAT -- "Outbound Traffic" --> IGW
-    IGW -- "Internet" --> Internet
-```
 
 ---
 
