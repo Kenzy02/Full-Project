@@ -152,7 +152,7 @@ docker run -p 8080:8080 your-registry/frontend:v1.0.0
 
 ## Cloud Infrastructure Setup
 
-### Option 1: AWS EKS
+### AWS EKS
 
 ```bash
 cd infrastructure/aws
@@ -177,53 +177,6 @@ terraform apply tfplan
 aws eks update-kubeconfig --name microservices-dev-eks --region us-east-1
 
 # Verify cluster access
-kubectl get nodes
-```
-
-### Option 2: Azure AKS
-
-```bash
-cd infrastructure/azure
-
-# Login to Azure
-az login
-
-# Copy and edit terraform.tfvars
-cp terraform.tfvars.example terraform.tfvars
-
-# Initialize and apply
-terraform init
-terraform plan -out=tfplan
-terraform apply tfplan
-
-# Configure kubectl
-az aks get-credentials --resource-group microservices-dev-rg --name microservices-dev-aks
-
-# Verify
-kubectl get nodes
-```
-
-### Option 3: GCP GKE
-
-```bash
-cd infrastructure/gcp
-
-# Setup GCP authentication
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-
-# Copy and edit terraform.tfvars
-cp terraform.tfvars.example terraform.tfvars
-
-# Initialize and apply
-terraform init
-terraform plan -out=tfplan
-terraform apply tfplan
-
-# Configure kubectl
-gcloud container clusters get-credentials microservices-dev-gke --region us-central1
-
-# Verify
 kubectl get nodes
 ```
 
@@ -766,11 +719,3 @@ terraform destroy
 
 ---
 
-## Support & Documentation
-
-- **Helm Charts Documentation**: See individual chart READMEs
-- **Kubernetes Documentation**: https://kubernetes.io/docs
-- **Security Best Practices**: See DOCKER_SECURITY.md
-- **Infrastructure**: See infrastructure/README.md
-
-For issues or questions, contact the DevOps team.
